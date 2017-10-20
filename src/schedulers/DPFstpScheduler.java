@@ -31,6 +31,7 @@ public class DPFstpScheduler implements Executor {
 								&& !threadPool[i].isAlive())) {
 					threadPool[i] = new Thread(commandQueue.remove());
 					threadPool[i].start();
+					break;
 				}
 			}
 		}
