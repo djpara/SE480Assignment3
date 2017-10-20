@@ -10,8 +10,8 @@ import schedulers.DPFstpScheduler;
 
 public class Main {
 	public static int NUM_ITEMS = 10_000;
-	public static String FIXED_SCHEDULER = "fixed scheduler";
-	public static String SEDA_SCHEDULER = "seda scheduler";
+	public static int FIXED_SCHEDULER = 1;
+	public static int SEDA_SCHEDULER = 2;
 	
 	private static Executor primeFstpScheduler = new DPFstpScheduler(10);
 	private static Executor sleepFstpScheduler = new DPFstpScheduler(10);
@@ -21,7 +21,7 @@ public class Main {
 	private static Executor sleepSedaScheduler = new DPFstpScheduler(10);
 	private static Executor printSedaScheduler = new DPFstpScheduler(10);
 	
-	private static List<CompletableFuture<Integer>> futures = new ArrayList<CompletableFuture<Integer>>();
+	private static List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
 	
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		
@@ -39,24 +39,25 @@ public class Main {
 		getFuture();
 	}
 	
-	private static void run(String scheduler) {
+	private static void run(int scheduler) {
+		
 		switch (scheduler) {
-		case FIXED_SCHEDULER:
+		case 1:
 			for (int i = 1; i <= 10_000; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFstpScheduler)
-						.thenApplyAsync((Long p) -> { sleep(10); return p; }, sleepFstpScheduler)
-						.thenAcceptAsync((Long p) -> printToConsoleln("The "+printNthSuffixFor(n)+
-								" prime is "+prime), printFstpScheduler));
+						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepFstpScheduler)
+						.thenAcceptAsync((Integer p) -> printToConsoleln("The "+printNthSuffixFor(n)+
+								" prime is "+p), printFstpScheduler));
 			}
 			break;
-		case SEDA_SCHEDULER:
+		case 2:
 			for (int i = 1; i <= 10_000; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeSedaScheduler)
-						.thenApplyAsync((Long p) -> { sleep(10); return p; }, sleepSedaScheduler)
-						.thenAcceptAsync((Long p) -> printToConsoleln("The "+printNthSuffixFor(n)+
-								" prime is "+prime), printSedaScheduler));
+						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepSedaScheduler)
+						.thenAcceptAsync((Integer p) -> printToConsoleln("The "+printNthSuffixFor(n)+
+								" prime is "+p), printSedaScheduler));
 			}
 			break;
 		default:
@@ -65,19 +66,17 @@ public class Main {
 	}
 	
 	private static void getFuture() throws InterruptedException, ExecutionException {
-		for (CompletableFuture<Integer> future : futures) {
+		for (CompletableFuture<Void> future : futures) {
 		    // Ensures that the entire job is executed to completion
 			future.get();
 		}
 		System.out.println("All threads executed!");
 	}
 	
-	@SuppressWarnings("unused")
 	private static void printToConsoleln(String s) {
 		System.out.println(s);
 	}
 	
-	@SuppressWarnings("unused")
 	private static void sleep(int n) {
 		try {
 			Thread.sleep(n);
@@ -87,7 +86,6 @@ public class Main {
 		}
 	}
 	
-	@SuppressWarnings("unused")
 	private static int calculateNthPrime(int n) {
 		int primeCount = 2;
 		int lastPrime = 3;
@@ -128,7 +126,6 @@ public class Main {
 		return lastPrime;
 	}
 
-	@SuppressWarnings("unused")
 	private static String printNthSuffixFor(int n) {
 		int onesDigit = n % 10;
 		int tensDigit = n % 100;

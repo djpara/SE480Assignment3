@@ -26,8 +26,9 @@ public class DPFstpScheduler implements Executor {
 	private void findAvailableThread() {
 		while (!commandQueue.isEmpty()) {
 			for (int i = 0; i < maxNumberOfThreads; ++i) {
-				if (!threadPool[i].isAlive() 
-						|| threadPool[i] != null) {
+				if (threadPool[i] == null
+						|| (threadPool[i] != null 
+								&& !threadPool[i].isAlive())) {
 					threadPool[i] = new Thread(commandQueue.remove());
 					threadPool[i].start();
 				}
