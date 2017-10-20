@@ -1,18 +1,29 @@
 package main;
 
-import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.Executor;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+
+import schedulers.DPFstpScheduler;
 
 public class Main {
 	public static int NUM_ITEMS = 10_000;
+	public static String FIXED_SCHEDULER = "fixed scheduler";
+	public static String SEDA_SCHEDULER = "seda scheduler";
 	
-	private static Executor primeScheduler;
-	private static Executor sleepScheduler;
-	private static Executor printScheduler;
+	private static Executor primeFstpScheduler = new DPFstpScheduler(10);
+	private static Executor sleepFstpScheduler = new DPFstpScheduler(10);
+	private static Executor printFstpScheduler = new DPFstpScheduler(10);
 	
-	public static void main(String[] args) {
+	private static Executor primeSedaScheduler = new DPFstpScheduler(10);
+	private static Executor sleepSedaScheduler = new DPFstpScheduler(10);
+	private static Executor printSedaScheduler = new DPFstpScheduler(10);
+	
+	private static List<CompletableFuture<Integer>> futures = new ArrayList<CompletableFuture<Integer>>();
+	
+	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		
 		// Step 1: Implement a simple, multi-stage workload which simulates a combination of CPU-intensive and I/O-intensive tasks
 		
@@ -24,34 +35,60 @@ public class Main {
 		
 		// Step 5: Perform a comparative analysis of using each of the above schedulers considering performance, maintainability, etc.
 		
-		run();		
+		run(FIXED_SCHEDULER);
+		getFuture();
 	}
 	
-	private static void run() {
-		
-		List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
-		
-		for (int i = 0; i < NUM_ITEMS; ++i) {
-			final int n = i;
-			futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeScheduler)
-					.thenApplyAsync((Long p) -> { try { Thread.sleep(10); } catch (InterruptedException e) {} return p; }, sleepScheduler)
-					.thenAcceptAsync((Long p) -> System.out.println(p), printScheduler));
-		}
-		
-		try {
-			for (int n = 1; n <= 10_000; ++n) {
-				int prime = calculateNthPrime(n);
-
-				Thread.sleep(10);
-				System.out.println("The "+printNthSuffixFor(n)+" prime is "+prime);
+	private static void run(String scheduler) {
+		switch (scheduler) {
+		case FIXED_SCHEDULER:
+			for (int i = 1; i <= 10_000; ++i) {
+				final int n = i;
+				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFstpScheduler)
+						.thenApplyAsync((Long p) -> { sleep(10); return p; }, sleepFstpScheduler)
+						.thenAcceptAsync((Long p) -> printToConsoleln("The "+printNthSuffixFor(n)+
+								" prime is "+prime), printFstpScheduler));
 			}
+			break;
+		case SEDA_SCHEDULER:
+			for (int i = 1; i <= 10_000; ++i) {
+				final int n = i;
+				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeSedaScheduler)
+						.thenApplyAsync((Long p) -> { sleep(10); return p; }, sleepSedaScheduler)
+						.thenAcceptAsync((Long p) -> printToConsoleln("The "+printNthSuffixFor(n)+
+								" prime is "+prime), printSedaScheduler));
+			}
+			break;
+		default:
+			break;	
+		}
+	}
+	
+	private static void getFuture() throws InterruptedException, ExecutionException {
+		for (CompletableFuture<Integer> future : futures) {
+		    // Ensures that the entire job is executed to completion
+			future.get();
+		}
+		System.out.println("All threads executed!");
+	}
+	
+	@SuppressWarnings("unused")
+	private static void printToConsoleln(String s) {
+		System.out.println(s);
+	}
+	
+	@SuppressWarnings("unused")
+	private static void sleep(int n) {
+		try {
+			Thread.sleep(n);
 		} catch (InterruptedException e) {
-			System.out.println("Thread Interrupted");
+			System.out.println("Thread interrupted");
 			e.printStackTrace();
 		}
 	}
 	
-	private static int calculateNthPrime(int n) throws InterruptedException {
+	@SuppressWarnings("unused")
+	private static int calculateNthPrime(int n) {
 		int primeCount = 2;
 		int lastPrime = 3;
 		
@@ -91,6 +128,7 @@ public class Main {
 		return lastPrime;
 	}
 
+	@SuppressWarnings("unused")
 	private static String printNthSuffixFor(int n) {
 		int onesDigit = n % 10;
 		int tensDigit = n % 100;
