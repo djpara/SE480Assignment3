@@ -8,18 +8,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 
+import enums.schedulers.SchedulerType;
 import schedulers.DPFstpScheduler;
 import schedulers.DPSedaScheduler;
 
 public class Main {
+	
 	public static int NUM_ITEMS = 10_000;
 	public static int NUM_THREADS = 10;
-	public static int SINGLE_THREAD_SCHEDULER = 0;
-	public static int FIXED_SCHEDULER = 1;
-	public static int SEDA_SCHEDULER = 2;
-	public static int SYSTEM_FIXED_SCHEDULER = 3;
-	public static int SYSTEM_CACHED_POOL_SCHEDULER = 4;
-	public static int FORK_JOIN_POOL_SCHEDULER = 5;
 	
 	// Built-in fixed thread pool scheduler
 	private static Executor primeFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
@@ -49,32 +45,21 @@ public class Main {
 	private static List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
 	
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
-		
-		// Step 1: Implement a simple, multi-stage workload which simulates a combination of CPU-intensive and I/O-intensive tasks
-		
-		// Step 2: Implement a thread pool scheduler which can execute the workload
-		
-		// Step 3: Implement a Simple Event-Driven Architecture (SEDA) scheduler which can execute the workload
-		
-		// Step 4: Execute the workload on each of the above schedulers, as well as your platform’s default scheduler, and perform a performance analysis of all three schedulers
-		
-		// Step 5: Perform a comparative analysis of using each of the above schedulers considering performance, maintainability, etc.
-		
 		System.out.println("Run started");
-		run(FIXED_SCHEDULER);
+		run(SchedulerType.FIXED_SCHEDULER);
 		getFuture();
 	}
 	
-	private static void run(int scheduler) {
+	private static void run(SchedulerType st) {
 		
-		switch (scheduler) {
-		case 0:
+		switch (st) {
+		case SINGLE_THREAD_SCHEDULER:
 			for (int n = 1; n <= NUM_ITEMS; ++n) {
 				int p = calculateNthPrime(n);
 				sleep(10);
 				printToConsoleln(createPrimeOutputString(n, p));
 			}
-		case 1:
+		case FIXED_SCHEDULER:
 			for (int i = 1; i <= NUM_ITEMS; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFstpScheduler)
@@ -82,7 +67,7 @@ public class Main {
 						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printFstpScheduler));
 			}
 			break;
-		case 2:
+		case SEDA_SCHEDULER:
 			for (int i = 1; i <= NUM_ITEMS; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeSedaScheduler)
@@ -90,7 +75,7 @@ public class Main {
 						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printSedaScheduler));
 			}
 			break;
-		case 3:
+		case SYSTEM_FIXED_SCHEDULER:
 			for (int i = 1; i <= NUM_ITEMS; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFixedPoolScheduler)
@@ -98,7 +83,7 @@ public class Main {
 						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printFixedPoolScheduler));
 			}
 			break;
-		case 4:
+		case SYSTEM_CACHED_POOL_SCHEDULER:
 			for (int i = 1; i <= NUM_ITEMS; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeCachedPoolScheduler)
@@ -106,7 +91,7 @@ public class Main {
 						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printCachedPoolScheduler));
 			}
 			break;
-		case 5:
+		case FORK_JOIN_POOL_SCHEDULER:
 			for (int i = 1; i <= NUM_ITEMS; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeForkJoinPoolScheduler)
