@@ -46,20 +46,24 @@ public class Main {
 	
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		System.out.println("Run started");
-		run(SchedulerType.FIXED_SCHEDULER);
+		run(SchedulerType.DP_SEDA_SCHEDULER);
 		getFuture();
 	}
 	
+	/**
+	 * Runs the schdules
+	 * @param st - Scheduler type. 
+	 */
 	private static void run(SchedulerType st) {
 		
 		switch (st) {
-		case SINGLE_THREAD_SCHEDULER:
+		case DP_SINGLE_THREAD_SCHEDULER:
 			for (int n = 1; n <= NUM_ITEMS; ++n) {
 				int p = calculateNthPrime(n);
 				sleep(10);
 				printToConsoleln(createPrimeOutputString(n, p));
 			}
-		case FIXED_SCHEDULER:
+		case DP_FIXED_SCHEDULER:
 			for (int i = 1; i <= NUM_ITEMS; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFstpScheduler)
@@ -67,7 +71,7 @@ public class Main {
 						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printFstpScheduler));
 			}
 			break;
-		case SEDA_SCHEDULER:
+		case DP_SEDA_SCHEDULER:
 			for (int i = 1; i <= NUM_ITEMS; ++i) {
 				final int n = i;
 				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeSedaScheduler)
@@ -104,18 +108,32 @@ public class Main {
 		}
 	}
 	
+	/**
+	 * Ensures that the entire job is executed to completion
+	 * @throws InterruptedException
+	 * @throws ExecutionException
+	 */
 	private static void getFuture() throws InterruptedException, ExecutionException {
 		for (CompletableFuture<Void> future : futures) {
 		    // Ensures that the entire job is executed to completion
 			future.get();
 		}
 		System.out.println("All threads executed!");
+		System.exit(0);
 	}
 	
+	/**
+	 * Standard print statement
+	 * @param s - string
+	 */
 	private static void printToConsoleln(String s) {
 		System.out.println(s);
 	}
 	
+	/**
+	 * Simulates I/O intensive process
+	 * @param n - number representing milliseconds
+	 */
 	private static void sleep(int n) {
 		try {
 			Thread.sleep(n);
@@ -125,6 +143,11 @@ public class Main {
 		}
 	}
 	
+	/**
+	 * Calculates and returns the Nth prime number
+	 * @param n - number
+	 * @return Nth prime number
+	 */
 	private static int calculateNthPrime(int n) {
 		int primeCount = 2;
 		int lastPrime = 3;
@@ -165,6 +188,11 @@ public class Main {
 		return lastPrime;
 	}
 
+	/**
+	 * Appends suffix to n to represent Nth number
+	 * @param n - number
+	 * @return string
+	 */
 	private static String printNthSuffixFor(int n) {
 		int onesDigit = n % 10;
 		int tensDigit = n % 100;
@@ -186,6 +214,12 @@ public class Main {
 		}
 	}
 	
+	/**
+	 * Builds output string
+	 * @param n - Nth number
+	 * @param p - Nth prime number 
+	 * @return string
+	 */
 	private static String createPrimeOutputString(int n, int p) {
 		return "The "+printNthSuffixFor(n)+" prime is "+p;
 	}
