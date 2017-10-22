@@ -5,21 +5,44 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 
 import schedulers.DPFstpScheduler;
 
 public class Main {
 	public static int NUM_ITEMS = 10_000;
+	public static int NUM_THREADS = 10;
 	public static int FIXED_SCHEDULER = 1;
 	public static int SEDA_SCHEDULER = 2;
+	public static int SYSTEM_FIXED_SCHEDULER = 3;
+	public static int SYSTEM_CACHED_POOL_SCHEDULER = 4;
+	public static int FORK_JOIN_POOL_SCHEDULER = 5;
 	
-	private static Executor primeFstpScheduler = new DPFstpScheduler(10);
-	private static Executor sleepFstpScheduler = new DPFstpScheduler(10);
-	private static Executor printFstpScheduler = new DPFstpScheduler(10);
+	// Built-in fixed thread pool shceduler
+	private static Executor primeFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
+	private static Executor sleepFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
+	private static Executor printFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
 	
-	private static Executor primeSedaScheduler = new DPFstpScheduler(10);
-	private static Executor sleepSedaScheduler = new DPFstpScheduler(10);
-	private static Executor printSedaScheduler = new DPFstpScheduler(10);
+	// Built-in cached thread pool scheduler
+	private static Executor primeCachedPoolScheduler = Executors.newCachedThreadPool();
+	private static Executor sleepCachedPoolScheduler = Executors.newCachedThreadPool();
+	private static Executor printCachedPoolScheduler = Executors.newCachedThreadPool();
+	
+	// Built-in fork join pool scheduler
+	private static Executor primeForkJoinPoolScheduler = ForkJoinPool.commonPool();
+	private static Executor sleepForkJoinPoolScheduler = ForkJoinPool.commonPool();
+	private static Executor printForkJoinPoolScheduler = ForkJoinPool.commonPool();
+	
+	// DP fixed thread pool scheduler
+	private static Executor primeFstpScheduler = new DPFstpScheduler(NUM_THREADS);
+	private static Executor sleepFstpScheduler = new DPFstpScheduler(NUM_THREADS);
+	private static Executor printFstpScheduler = new DPFstpScheduler(NUM_THREADS);
+	
+	// DP SEDA-design thread pool scheduler
+	private static Executor primeSedaScheduler = new DPFstpScheduler(NUM_THREADS);
+	private static Executor sleepSedaScheduler = new DPFstpScheduler(NUM_THREADS);
+	private static Executor printSedaScheduler = new DPFstpScheduler(NUM_THREADS);
 	
 	private static List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
 	
@@ -35,7 +58,8 @@ public class Main {
 		
 		// Step 5: Perform a comparative analysis of using each of the above schedulers considering performance, maintainability, etc.
 		
-		run(FIXED_SCHEDULER);
+		System.out.println("Run started");
+		run(FORK_JOIN_POOL_SCHEDULER);
 		getFuture();
 	}
 	
@@ -58,6 +82,33 @@ public class Main {
 						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepSedaScheduler)
 						.thenAcceptAsync((Integer p) -> printToConsoleln("The "+printNthSuffixFor(n)+
 								" prime is "+p), printSedaScheduler));
+			}
+			break;
+		case 3:
+			for (int i = 1; i <= 10_000; ++i) {
+				final int n = i;
+				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFixedPoolScheduler)
+						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepFixedPoolScheduler)
+						.thenAcceptAsync((Integer p) -> printToConsoleln("The "+printNthSuffixFor(n)+
+								" prime is "+p), printFixedPoolScheduler));
+			}
+			break;
+		case 4:
+			for (int i = 1; i <= 10_000; ++i) {
+				final int n = i;
+				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeCachedPoolScheduler)
+						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepCachedPoolScheduler)
+						.thenAcceptAsync((Integer p) -> printToConsoleln("The "+printNthSuffixFor(n)+
+								" prime is "+p), printCachedPoolScheduler));
+			}
+			break;
+		case 5:
+			for (int i = 1; i <= 10_000; ++i) {
+				final int n = i;
+				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeForkJoinPoolScheduler)
+						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepForkJoinPoolScheduler)
+						.thenAcceptAsync((Integer p) -> printToConsoleln("The "+printNthSuffixFor(n)+
+								" prime is "+p), printForkJoinPoolScheduler));
 			}
 			break;
 		default:
