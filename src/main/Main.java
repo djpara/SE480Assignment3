@@ -14,8 +14,8 @@ import schedulers.DPSedaScheduler;
 
 public class Main {
 	
-	public static int NUM_ITEMS = 10_000;
-	public static int NUM_THREADS = 10;
+	public static int NUM_ITEMS = 5_000;
+	public static int NUM_THREADS = 50;
 	
 	// Built-in fixed thread pool scheduler
 	private static Executor primeFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
@@ -44,14 +44,17 @@ public class Main {
 	
 	private static List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
 	
+	private static long startTime	= (long) 0;
+	private static long endTime   	= (long) 0;;
+	
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
-		System.out.println("Run started");
-		run(SchedulerType.DP_SEDA_SCHEDULER);
+		startTime = System.currentTimeMillis();
+		run(SchedulerType.SYSTEM_CACHED_POOL_SCHEDULER);
 		getFuture();
 	}
 	
 	/**
-	 * Runs the schdules
+	 * Runs the schedules
 	 * @param st - Scheduler type. 
 	 */
 	private static void run(SchedulerType st) {
@@ -118,7 +121,8 @@ public class Main {
 		    // Ensures that the entire job is executed to completion
 			future.get();
 		}
-		System.out.println("All threads executed!");
+		endTime = System.currentTimeMillis();
+		System.out.println("All threads executed @ "+calculateRuntime()+" ms!");
 		System.exit(0);
 	}
 	
@@ -223,5 +227,11 @@ public class Main {
 	private static String createPrimeOutputString(int n, int p) {
 		return "The "+printNthSuffixFor(n)+" prime is "+p;
 	}
-
+	
+	/**
+	 * Calculates and return application runtime in milliseconds 
+	 */
+	private static long calculateRuntime() {
+		return endTime - startTime;
+	}
 }
