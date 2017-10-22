@@ -76,5 +76,3 @@ public class DPFstpScheduler implements Executor {
 		return commandQueue.poll();
 	}
 }
-
-
