@@ -11,45 +11,27 @@ import java.util.concurrent.ForkJoinPool;
 import enums.schedulers.SchedulerType;
 import schedulers.DPFstpScheduler;
 import schedulers.DPSedaScheduler;
+import throughputAnalysis.DPSedaSchedulerWithThroughput;
 
 public class Main {
 	
-	public static int NUM_ITEMS = 5_000;
+	public static int NUM_ITEMS = 10_000;
 	public static int NUM_THREADS = 50;
 	
-	// Built-in fixed thread pool scheduler
-	private static Executor primeFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
-	private static Executor sleepFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
-	private static Executor printFixedPoolScheduler = Executors.newFixedThreadPool(NUM_THREADS);
+	private static SchedulerType SCHEDULER_TYPE = SchedulerType.DP_SEDA_THROUGHPUT_SCHEDULER;
 	
-	// Built-in cached thread pool scheduler
-	private static Executor primeCachedPoolScheduler = Executors.newCachedThreadPool();
-	private static Executor sleepCachedPoolScheduler = Executors.newCachedThreadPool();
-	private static Executor printCachedPoolScheduler = Executors.newCachedThreadPool();
-	
-	// Built-in fork join pool scheduler
-	private static Executor primeForkJoinPoolScheduler = ForkJoinPool.commonPool();
-	private static Executor sleepForkJoinPoolScheduler = ForkJoinPool.commonPool();
-	private static Executor printForkJoinPoolScheduler = ForkJoinPool.commonPool();
-	
-	// DP fixed thread pool scheduler
-	private static Executor primeFstpScheduler = new DPFstpScheduler(NUM_THREADS);
-	private static Executor sleepFstpScheduler = new DPFstpScheduler(NUM_THREADS);
-	private static Executor printFstpScheduler = new DPFstpScheduler(NUM_THREADS);
-	
-	// DP SEDA-design thread pool scheduler
-	private static Executor primeSedaScheduler = new DPSedaScheduler();
-	private static Executor sleepSedaScheduler = new DPSedaScheduler();
-	private static Executor printSedaScheduler = new DPSedaScheduler();
+	private static Executor primeScheduler;
+	private static Executor sleepScheduler;
+	private static Executor printScheduler;
 	
 	private static List<CompletableFuture<Void>> futures = new ArrayList<CompletableFuture<Void>>();
 	
 	private static long startTime	= (long) 0;
-	private static long endTime   	= (long) 0;;
+	private static long endTime   	= (long) 0;
 	
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		startTime = System.currentTimeMillis();
-		run(SchedulerType.SYSTEM_CACHED_POOL_SCHEDULER);
+		run(SCHEDULER_TYPE);
 		getFuture();
 	}
 	
@@ -60,54 +42,67 @@ public class Main {
 	private static void run(SchedulerType st) {
 		
 		switch (st) {
+		// DP single thread
 		case DP_SINGLE_THREAD_SCHEDULER:
 			for (int n = 1; n <= NUM_ITEMS; ++n) {
 				int p = calculateNthPrime(n);
 				sleep(10);
 				printToConsoleln(createPrimeOutputString(n, p));
 			}
+			break;
+		// DP fixed thread pool scheduler
 		case DP_FIXED_SCHEDULER:
-			for (int i = 1; i <= NUM_ITEMS; ++i) {
-				final int n = i;
-				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFstpScheduler)
-						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepFstpScheduler)
-						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printFstpScheduler));
-			}
+			primeScheduler = new DPFstpScheduler(NUM_THREADS);
+			sleepScheduler = new DPFstpScheduler(NUM_THREADS);
+			printScheduler = new DPFstpScheduler(NUM_THREADS);
+			runCompletableFutures();
 			break;
+		// DP SEDA-design thread pool scheduler
 		case DP_SEDA_SCHEDULER:
-			for (int i = 1; i <= NUM_ITEMS; ++i) {
-				final int n = i;
-				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeSedaScheduler)
-						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepSedaScheduler)
-						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printSedaScheduler));
-			}
+			primeScheduler = new DPSedaScheduler();
+			sleepScheduler = new DPSedaScheduler();
+			printScheduler = new DPSedaScheduler();
+			runCompletableFutures();
 			break;
+		// DP SEDA-design thread pool with throughput calculator
+		case DP_SEDA_THROUGHPUT_SCHEDULER:
+			primeScheduler = new DPSedaSchedulerWithThroughput();
+			sleepScheduler = new DPSedaSchedulerWithThroughput();
+			printScheduler = new DPSedaSchedulerWithThroughput();
+			runCompletableFutures();
+			break;
+		// Built-in fixed thread pool scheduler
 		case SYSTEM_FIXED_SCHEDULER:
-			for (int i = 1; i <= NUM_ITEMS; ++i) {
-				final int n = i;
-				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeFixedPoolScheduler)
-						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepFixedPoolScheduler)
-						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printFixedPoolScheduler));
-			}
+			primeScheduler = Executors.newFixedThreadPool(NUM_THREADS);
+			sleepScheduler = Executors.newFixedThreadPool(NUM_THREADS);
+			printScheduler = Executors.newFixedThreadPool(NUM_THREADS);
+			runCompletableFutures();
 			break;
+		// Built-in cached thread pool scheduler
 		case SYSTEM_CACHED_POOL_SCHEDULER:
-			for (int i = 1; i <= NUM_ITEMS; ++i) {
-				final int n = i;
-				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeCachedPoolScheduler)
-						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepCachedPoolScheduler)
-						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printCachedPoolScheduler));
-			}
+			primeScheduler = Executors.newCachedThreadPool();
+			sleepScheduler = Executors.newCachedThreadPool();
+			printScheduler = Executors.newCachedThreadPool();
+			runCompletableFutures();
 			break;
+		// Built-in fork join pool scheduler
 		case FORK_JOIN_POOL_SCHEDULER:
-			for (int i = 1; i <= NUM_ITEMS; ++i) {
-				final int n = i;
-				futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeForkJoinPoolScheduler)
-						.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepForkJoinPoolScheduler)
-						.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printForkJoinPoolScheduler));
-			}
+			primeScheduler = ForkJoinPool.commonPool();
+			sleepScheduler = ForkJoinPool.commonPool();
+			printScheduler = ForkJoinPool.commonPool();
+			runCompletableFutures();
 			break;
 		default:
 			break;	
+		}
+	}
+	
+	private static void runCompletableFutures() {
+		for (int i = 1; i <= NUM_ITEMS; ++i) {
+			final int n = i;
+			futures.add(CompletableFuture.supplyAsync(() -> calculateNthPrime(n), primeScheduler)
+					.thenApplyAsync((Integer p) -> { sleep(10); return p; }, sleepScheduler)
+					.thenAcceptAsync((Integer p) -> printToConsoleln(createPrimeOutputString(n, p)), printScheduler));
 		}
 	}
 	
@@ -121,8 +116,14 @@ public class Main {
 		    // Ensures that the entire job is executed to completion
 			future.get();
 		}
+		
 		endTime = System.currentTimeMillis();
 		System.out.println("All threads executed @ "+calculateRuntime()+" ms!");
+		
+		if (SCHEDULER_TYPE == SchedulerType.DP_SEDA_THROUGHPUT_SCHEDULER) {
+			System.out.println(((DPSedaSchedulerWithThroughput) primeScheduler).getDataString());
+		}
+		
 		System.exit(0);
 	}
 	
@@ -131,7 +132,7 @@ public class Main {
 	 * @param s - string
 	 */
 	private static void printToConsoleln(String s) {
-		System.out.println(s);
+//		System.out.println(s);
 	}
 	
 	/**
