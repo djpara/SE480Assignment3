@@ -121,7 +121,9 @@ public class Main {
 		System.out.println("All threads executed @ "+calculateRuntime()+" ms!");
 		
 		if (SCHEDULER_TYPE == SchedulerType.DP_SEDA_THROUGHPUT_SCHEDULER) {
-			System.out.println(((DPSedaSchedulerWithThroughput) primeScheduler).getDataString());
+			System.out.println(((DPSedaSchedulerWithThroughput) primeScheduler).getThroughputDataString());
+			System.out.println();
+			System.out.println(((DPSedaSchedulerWithThroughput) primeScheduler).getLatencyDataString());
 		}
 		
 		System.exit(0);

@@ -74,7 +74,6 @@ public class DPSedaScheduler implements Executor {
 		if (commandQueue.size() > 50 
 				&& threadPool.size() < MAX_THREAD_POOL_SIZE) {
 			threadPool.add(new DPThread());
-//			System.out.println("Thread pool size = "+threadPool.size());
 		}
 		commandQueue.add(command);
 	}
@@ -89,7 +88,6 @@ public class DPSedaScheduler implements Executor {
 			DPThread t = ((DPThread) threadPool.get(0));
 			threadPool.remove(t);
 			t.kill();
-//			System.out.println("Thread pool size = "+threadPool.size());
 		}
 		return commandQueue.poll();
 	}

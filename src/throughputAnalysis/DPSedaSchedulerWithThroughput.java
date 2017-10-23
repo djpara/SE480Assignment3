@@ -23,6 +23,14 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 	ArrayList<Integer> tasksProcessedArray;
 	ArrayList<Integer> numberOfThreadsArray;
 	
+	ArrayList<Long> latencyProcessTimeArray;
+	ArrayList<Integer> latencyThreadCountArray;
+	ArrayList<Integer> latencySecondCountArray;
+	
+	ArrayList<Long> averagedLatencyProcessTimeArray;
+	ArrayList<Integer> averagedLatencyThreadCountArray;
+	ArrayList<Integer> averagedLatencySecondCountArray;
+	
 	public DPSedaSchedulerWithThroughput() {
 		threadPool		= new ArrayList<Thread>();
 		commandQueue 	= new LinkedList<Runnable>();
@@ -32,6 +40,10 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 		secondsArray			= new ArrayList<Integer>();
 		tasksProcessedArray	= new ArrayList<Integer>();
 		numberOfThreadsArray	= new ArrayList<Integer>();
+		
+		latencyProcessTimeArray	= new ArrayList<Long>();
+		latencyThreadCountArray 	= new ArrayList<Integer>(); 
+		latencySecondCountArray	= new ArrayList<Integer>();
 		
 		timer = new Timer();
 		timer.schedule(new RecordData(), 0, 1000);
@@ -62,8 +74,10 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 				while (this.execute) {
 					Runnable command;
 					while ((command = dequeue()) != null) {
+						Long startTime = System.currentTimeMillis();
 						command.run();
 						addToProcessedTasks();
+						calculateLatencyData(startTime);
 					}
 					Thread.sleep(1);
 				}
@@ -96,7 +110,7 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 	 * Creates and returns a string representation of the throughput analysis
 	 * @return String
 	 */
-	public String getDataString() {
+	public String getThroughputDataString() {
 		StringBuilder s = new StringBuilder();
 		
 		for (int i = 0; i < secondsArray.size(); ++i) {
@@ -108,6 +122,20 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 		return s.toString();
 	}
 	
+	public String getLatencyDataString() {
+		StringBuilder s = new StringBuilder();
+		
+		averageLatencyData();
+		
+		for (int i = 0; i < averagedLatencyProcessTimeArray.size(); ++i) {
+			s.append("Second Marker: "+averagedLatencySecondCountArray.get(i)+"; "
+					+ "Average Process Time: "+averagedLatencyProcessTimeArray.get(i)+"; "
+					+ "Average Number of Active Threads: "+averagedLatencyThreadCountArray.get(i)+"\n");
+		}
+		
+		return s.toString();
+	}
+		
 	/**
 	 * Schedules command to the command queue
 	 */
@@ -124,7 +152,6 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 		if (commandQueue.size() > 50 
 				&& threadPool.size() < MAX_THREAD_POOL_SIZE) {
 			threadPool.add(new DPThread());
-//			System.out.println("Thread pool size = "+threadPool.size());
 		}
 		commandQueue.add(command);
 	}
@@ -139,7 +166,6 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 			DPThread t = ((DPThread) threadPool.get(0));
 			threadPool.remove(t);
 			t.kill();
-//			System.out.println("Thread pool size = "+threadPool.size());
 		}
 		return commandQueue.poll();
 	}
@@ -156,5 +182,58 @@ public class DPSedaSchedulerWithThroughput implements Executor {
 	 */
 	private synchronized void clearProcessedTasks() {
 		processedTasks = 0;
+	}
+	
+	private synchronized void calculateLatencyData(Long startTime) {
+		latencyProcessTimeArray.add(System.currentTimeMillis()-startTime);
+		latencySecondCountArray.add(secondMarker);
+		latencyThreadCountArray.add(threadPool.size());
+	}
+	
+	private void averageLatencyData() {
+		averagedLatencyProcessTimeArray = new ArrayList<Long>();
+		averagedLatencyThreadCountArray = new ArrayList<Integer>();
+		averagedLatencySecondCountArray = new ArrayList<Integer>();
+		
+		Integer second = 1;
+		ArrayList<Long> processTimeToAverageArray = new ArrayList<Long>();
+		ArrayList<Integer> threadCountToAverageArray = new ArrayList<Integer>();
+		
+		for (int i = 0; i < latencyProcessTimeArray.size(); ++i) {
+			if (latencySecondCountArray.get(i) == second) {
+				processTimeToAverageArray.add(latencyProcessTimeArray.get(i));
+				threadCountToAverageArray.add(latencyThreadCountArray.get(i));
+			} else {
+				averagedLatencyProcessTimeArray.add(calculateLongAverage(processTimeToAverageArray));
+				averagedLatencyThreadCountArray.add(calculateIntegerAverage(threadCountToAverageArray));
+				averagedLatencySecondCountArray.add(second);
+				++second;
+			}
+		}
+		
+	}
+	
+	private Integer calculateIntegerAverage(ArrayList<Integer> array) {
+		Integer sum = 0;
+		int i = 0;
+		
+		while (i < array.size()) {
+			sum += array.get(i);
+			++i;
+		}
+		
+		return sum/array.size();
+	}
+	
+	private Long calculateLongAverage(ArrayList<Long> array) {
+		Long sum = (long) 0;
+		int i = 0;
+		
+		while (i < array.size()) {
+			sum += array.get(i);
+			++i;
+		}
+		
+		return sum/array.size();
 	}
 }
